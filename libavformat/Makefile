@@ -129,6 +129,7 @@ OBJS-$(CONFIG_CDG_DEMUXER)               += cdg.o
 OBJS-$(CONFIG_CDXL_DEMUXER)              += cdxl.o
 OBJS-$(CONFIG_CINE_DEMUXER)              += cinedec.o
 OBJS-$(CONFIG_CONCAT_DEMUXER)            += concatdec.o
+OBJS-$(CONFIG_PLAYLIST_DEMUXER)          += playlistdec.o
 OBJS-$(CONFIG_CRC_MUXER)                 += crcenc.o
 OBJS-$(CONFIG_DATA_DEMUXER)              += rawdec.o
 OBJS-$(CONFIG_DATA_MUXER)                += rawenc.o

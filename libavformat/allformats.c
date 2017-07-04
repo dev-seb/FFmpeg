@@ -95,6 +95,7 @@ static void register_all(void)
     REGISTER_DEMUXER (CDXL,             cdxl);
     REGISTER_DEMUXER (CINE,             cine);
     REGISTER_DEMUXER (CONCAT,           concat);
+    REGISTER_DEMUXER (PLAYLIST,         playlist);
     REGISTER_MUXER   (CRC,              crc);
     REGISTER_MUXER   (DASH,             dash);
     REGISTER_MUXDEMUX(DATA,             data);
