@@ -149,7 +149,6 @@ static void playlist_init(AVFormatContext *avf)
         av_log(avf, AV_LOG_ERROR, "can't get pid file name\n");     
     }
     else {
-        av_log(avf, AV_LOG_INFO, "pid file : %s\n", pid_file);
         if((ret = avio_open(&pb, pid_file, AVIO_FLAG_WRITE)) < 0) {       
             av_log(avf, AV_LOG_ERROR, "can't write pid file\n");     
         }
@@ -431,11 +430,11 @@ static int open_file(AVFormatContext *avf, unsigned fileno)
         playlist_free_file(&playlist->files[previous]);
     }
     // Current file
+    av_log(avf, AV_LOG_INFO, "current file: %s", file->url);
     if((current_file = playlist_file(avf, "current")) == NULL) {
         av_log(avf, AV_LOG_ERROR, "can't get current file name\n");      
     }
     else {
-        av_log(avf, AV_LOG_INFO, "pid file : %s\n", current_file);
         if((ret = avio_open(&pb, current_file, AVIO_FLAG_WRITE)) < 0) {       
             av_log(avf, AV_LOG_ERROR, "can't write current file\n");     
         }
@@ -576,13 +575,6 @@ fail:
     return ret;
 }
 
-static int playlist_update(AVFormatContext *avf) 
-{
-    PlaylistContext *playlist = avf->priv_data;
-
-    return playlist_read_file(avf, playlist->path);
-}
-
 static int playlist_read_header(AVFormatContext *avf)
 {
     PlaylistContext *playlist = avf->priv_data;
@@ -607,27 +599,48 @@ static int open_next_file(AVFormatContext *avf)
 {
     PlaylistContext *playlist = avf->priv_data;
     unsigned fileno = playlist->cur_file - playlist->files;
+    int ret = 1;
+    char *insertlist = NULL;
+    char *replacelist = NULL;
 
     if (playlist->cur_file->duration == AV_NOPTS_VALUE)
         playlist->cur_file->duration = playlist->avf->duration - (playlist->cur_file->file_inpoint - playlist->cur_file->file_start_time);
 
     if(playlist->loop > 0)
         playlist->loop--;
-    
+
+    // Check special files
+    if(playlist->loop < 0) {
+        insertlist = playlist_file(avf, "insertlist");
+        replacelist = playlist_file(avf, "replacelist");
+        if(avio_check(insertlist, AVIO_FLAG_READ) > 0) {
+            av_log(avf, AV_LOG_INFO, "insert temporary playlist from %s\n", insertlist);
+            ret = playlist_read_file(avf, insertlist);
+            unlink(insertlist);
+        }
+        else if(avio_check(replacelist, AVIO_FLAG_READ) > 0) {
+            av_log(avf, AV_LOG_INFO, "replace current playlist from %s\n", replacelist);
+            ret = playlist_read_file(avf, replacelist);
+            rename(replacelist, playlist->path);
+        }
+        av_free(insertlist);
+        av_free(replacelist);
+    }
+
     ++fileno;
 
     if (fileno >= playlist->nb_files) {
         if(playlist->loop != 0) {
             playlist->loops++;
-            playlist_update(avf);
+            if(ret > 0) {
+                playlist_read_file(avf, playlist->path);
+            }
         }
         else {
             playlist->eof = 1;
             return AVERROR_EOF;
         }
     }
-
-    av_log(avf, AV_LOG_INFO, "== loop %d, loops: %d, fileno: %d\n", playlist->loop, playlist->loops, fileno);
 
     return open_file(avf, fileno);
 }
